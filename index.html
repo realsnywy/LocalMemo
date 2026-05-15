@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LocalMemo - Notes and Tasks</title>
+  <meta name="description"
+    content="LocalMemo: A notes and tasks app inspired by Google Keep, with optional GitHub Gist synchronization.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Lato:wght@400;700&display=swap"
+    as="style" onload="this.rel='stylesheet'">
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Lato:wght@400;700&display=swap"
+      rel="stylesheet">
+  </noscript>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.41-1.41L10.5 9.7 4 17h17L12.96 8.29z' fill='%23e5e5e5'/></svg>">
+</head>
+
+<body class="fade-in">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="app-title-section">
+        <svg class="app-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.41-1.41L10.5 9.7 4 17h17L12.96 8.29z"
+            fill="currentColor" />
+        </svg>
+        <h1 class="app-title">LocalMemo</h1>
+      </div>
+      <div class="header-actions">
+        <div class="language-selector">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="pt">PT</button>
+        </div>
+        <button class="action-btn" id="settings-btn" title="Settings">
+          <i class="bi bi-gear"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="app-main">
+    <!-- Create Section -->
+    <section class="create-section">
+      <div class="create-button-group">
+        <button class="create-btn-main" id="create-main-btn" title="Create new item">
+          <i class="bi bi-plus"></i>
+        </button>
+        <div class="create-btn-menu">
+          <button class="create-btn-option" id="new-note-btn">
+            <i class="bi bi-plus-circle"></i> Note
+          </button>
+          <button class="create-btn-option" id="new-task-btn">
+            <i class="bi bi-check2-circle"></i> Task
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lists Section (Google Tasks style tabs) -->
+    <section class="lists-section">
+      <div class="lists-tabs" id="lists-tabs-container">
+        <button class="list-tab active" data-list="All">All</button>
+      </div>
+      <button class="list-add-btn" id="list-add-btn" title="Add new list">
+        <i class="bi bi-plus"></i>
+      </button>
+    </section>
+
+    <!-- Search & Filter Section -->
+    <section class="search-section">
+      <div class="search-container">
+        <input type="text" id="search-input" class="search-input" placeholder="Search notes and tasks..."
+          autocomplete="off">
+        <i class="bi bi-search search-icon"></i>
+      </div>
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="notes">Notes</button>
+        <button class="filter-btn" data-filter="tasks">Tasks</button>
+        <button class="filter-btn" data-filter="archived">Archived</button>
+        <button class="filter-btn" data-filter="trash">Trash</button>
+      </div>
+      <div class="view-mode-toggle">
+        <button class="view-mode-btn active" data-mode="grid" title="Grid view">
+          <i class="bi bi-grid-3x2-gap"></i>
+        </button>
+        <button class="view-mode-btn" data-mode="list" title="List view">
+          <i class="bi bi-list-ul"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- Notes Grid -->
+    <section class="notes-container" id="notes-grid">
+      <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <p>No notes or tasks yet.<br>Create one to get started!</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>2026 @ Gabriel "Snywy" Furtado</p>
+  </footer>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div class="modal-content settings-modal">
+      <div class="modal-header">
+        <h2 id="settings-title">Settings</h2>
+        <button class="close-btn" id="close-settings-btn">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- GitHub Settings Tab -->
+        <div class="settings-section">
+          <h3 id="github-sync-title">GitHub Synchronization</h3>
+          <p class="settings-description" id="github-sync-desc">Configure your GitHub Personal Access Token (PAT) and
+            Gist ID to sync your notes automatically to the cloud.</p>
+
+          <div class="form-group">
+            <label for="github-pat-input" id="github-pat-label">GitHub Personal Access Token</label>
+            <input type="password" id="github-pat-input" class="form-input" placeholder="ghp_xxxxxxxxxxxx"
+              autocomplete="off">
+            <small id="github-pat-desc">Token with gist permission (create and edit)</small>
+          </div>
+
+          <div class="form-group">
+            <label for="github-gist-id-input" id="github-gist-id-label">Private Gist ID</label>
+            <input type="text" id="github-gist-id-input" class="form-input" placeholder="xxxxxxxxxxxxxxxxxxxxxxxx"
+              autocomplete="off">
+            <small id="github-gist-id-desc">Unique ID of your gist (will be created automatically if it does not
+              exist)</small>
+          </div>
+
+          <div class="button-group">
+            <button class="create-btn primary" id="test-github-btn">
+              <i class="bi bi-cloud-check"></i> Test Connection
+            </button>
+            <button class="create-btn secondary" id="sync-now-btn">
+              <i class="bi bi-arrow-repeat"></i> Sync Now
+            </button>
+            <button class="create-btn danger" id="clear-github-btn">
+              <i class="bi bi-trash"></i> Clear Settings
+            </button>
+          </div>
+          <div id="github-status" class="github-status"></div>
+        </div>
+
+        <!-- General Settings -->
+        <div class="settings-section">
+          <h3 id="general-title">General</h3>
+          <div class="form-group">
+            <label for="auto-sync-toggle" class="toggle-label">
+              <input type="checkbox" id="auto-sync-toggle" class="toggle-input">
+              <span id="auto-sync-label-text">Automatically sync when there are changes</span>
+            </label>
+          </div>
+
+          <div class="button-group">
+            <button class="create-btn secondary" id="export-data-btn">
+              <i class="bi bi-download"></i> Export Data (JSON)
+            </button>
+            <button class="create-btn secondary" id="import-data-btn">
+              <i class="bi bi-upload"></i> Import Data (JSON)
+            </button>
+            <input type="file" id="import-file-input" accept=".json" style="display: none;">
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="settings-section danger-section">
+          <h3 id="danger-zone-title">Danger Zone</h3>
+          <button class="create-btn danger" id="clear-all-btn">
+            <i class="bi bi-exclamation-triangle"></i> Delete All Local Data
+          </button>
+          <small id="danger-zone-desc">This action is irreversible and cannot be undone!</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="create-btn primary" id="close-modal-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note Editor Modal -->
+  <div class="modal" id="note-editor-modal">
+    <div class="modal-overlay" id="note-editor-overlay"></div>
+    <div class="modal-content note-editor-modal">
+      <div class="modal-header">
+        <h2 id="editor-title">New Note</h2>
+        <button class="close-btn" id="close-editor-btn">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="editor-content">
+          <div id="editor-tabs" class="editor-tabs">
+            <button class="editor-tab active" data-tab="note">Note</button>
+            <button class="editor-tab" data-tab="task">Task</button>
+          </div>
+
+          <div class="editor-meta">
+            <div class="meta-grid">
+              <div class="form-group">
+                <label for="item-list-input" id="item-list-label">List</label>
+                <input type="text" id="item-list-input" class="form-input" placeholder="Main list" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="item-tags-input" id="item-tags-label">Tags</label>
+                <input type="text" id="item-tags-input" class="form-input" placeholder="work, ideas, personal"
+                  autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="item-reminder-input" id="item-reminder-label">Reminder</label>
+                <input type="datetime-local" id="item-reminder-input" class="form-input" autocomplete="off">
+              </div>
+            </div>
+            <p class="editor-meta-note" id="editor-markdown-note">Markdown is supported in note content.</p>
+          </div>
+
+          <!-- Note Editor -->
+          <div id="note-tab" class="editor-tab-content active">
+            <input type="text" id="note-title-input" class="editor-title" placeholder="Note title (optional)"
+              autocomplete="off">
+            <textarea id="note-content-input" class="editor-textarea"
+              placeholder="Write your note here... (Markdown supported)"></textarea>
+          </div>
+
+          <!-- Task Editor -->
+          <div id="task-tab" class="editor-tab-content">
+            <input type="text" id="task-title-input" class="editor-title" placeholder="Task title" autocomplete="off">
+            <div id="task-items-container" class="task-items-container">
+              <!-- Task items will be added here -->
+            </div>
+            <button class="add-task-item-btn" id="add-task-item-btn">
+              <i class="bi bi-plus"></i> Add Item
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="create-btn secondary" id="cancel-editor-btn">Cancel</button>
+        <button class="create-btn primary" id="save-editor-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note Card Context Menu -->
+  <div class="context-menu" id="context-menu">
+    <button class="context-menu-item" data-action="edit">
+      <i class="bi bi-pencil"></i> Edit
+    </button>
+    <button class="context-menu-item" data-action="duplicate">
+      <i class="bi bi-files"></i> Duplicate
+    </button>
+    <button class="context-menu-item" data-action="unarchive" style="display: none;">
+      <i class="bi bi-arrow-counterclockwise"></i> Unarchive
+    </button>
+    <button class="context-menu-item" data-action="restore" style="display: none;">
+      <i class="bi bi-arrow-counterclockwise"></i> Restore
+    </button>
+    <button class="context-menu-item" data-action="print">
+      <i class="bi bi-printer"></i> Print
+    </button>
+  </div>
+
+  <!-- Hidden input for import -->
+  <input type="file" id="file-input" accept=".json" style="display: none;">
+
+  <!-- App Dialog -->
+  <div class="modal app-dialog-modal" id="app-dialog-modal">
+    <div class="modal-overlay" id="app-dialog-overlay"></div>
+    <div class="modal-content app-dialog-content">
+      <div class="modal-header">
+        <h2 id="app-dialog-title">Notice</h2>
+        <button class="close-btn" id="app-dialog-close-btn">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="app-dialog-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="create-btn secondary" id="app-dialog-cancel-btn">Cancel</button>
+        <button class="create-btn primary" id="app-dialog-confirm-btn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+  <script src="github-sync.js"></script>
+</body>
+
+</html>
