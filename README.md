@@ -1,6 +1,7 @@
 # LocalMemo
 
 LocalMemo is a lightweight notes and tasks app built with vanilla HTML, CSS, and JavaScript. Everything is stored locally in the browser, with optional private GitHub Gist sync for backup.
+Recent work has modularized core logic into ES modules under `src/` while keeping a legacy `app.js` bootstrap for compatibility.
 
 ## Highlights
 
@@ -14,6 +15,11 @@ LocalMemo is a lightweight notes and tasks app built with vanilla HTML, CSS, and
 - Private GitHub Gist backup and restore.
 - Responsive layout with system light/dark support.
 - Printing support for the current filtered view.
+- Multi-language support (English, Portuguese, Spanish) and language selector.
+- Note banners (image URL or local upload) and improved live Markdown preview.
+- Richer editor toolbar with headings (H1/H2/H3), bold/italic, code and lists.
+- Browser notifications for reminders and in-page scheduling.
+- Drag-and-drop manual reordering and sort controls (Custom/Name/Date + direction).
 
 ## Quick Start
 
@@ -38,22 +44,38 @@ LocalMemo is a lightweight notes and tasks app built with vanilla HTML, CSS, and
 
 ## Project Files
 
+Current layout (not exhaustive):
+
 ```
 LocalMemo/
-├── index.html
-├── styles.css
-├── app.js
-├── github-sync.js
+├── index.html                # app entry and markup
+├── styles.css                # global styles
+├── app.js                    # legacy bootstrap (still in use for now)
+├── github-sync.js            # optional GitHub Gist sync
+├── i18n.js                   # translations and language switching
+├── src/                      # ES module sources (new)
+│   ├── models.js             # model helpers (normalization, markdown)
+│   ├── storage.js            # DataManager (load/save, CRUD)
+│   └── ui.js                 # UI bridge / module (migration in progress)
 └── README.md
 ```
 
 ## Notes
 
-- Markdown is supported in note content.
+- Markdown is supported in note content; there is a live preview in the editor.
 - Custom lists are created and managed through the list tabs interface.
 - Each item tracks creation date and last updated date.
 - Archived items and trash remain stored locally until restored or removed.
 - Printing uses the browser dialog and reflects the current filtered view.
+
+### Development notes
+
+- The codebase is being modernized to ES modules under `src/`. The legacy `app.js` still contains the full `UIManager` and bootstraps the app; `src/ui.js` currently provides a bridge and a non-destructive migration path. After the UI module is fully migrated, `app.js` can be removed and `src/ui.js` used as the primary entrypoint (`<script type="module" src="src/ui.js"></script>`).
+- Per-list custom ordering is a requested feature; manual drag/drop ordering is implemented globally and can be extended to persist per-list order.
+
+### Contributing
+
+- Open an issue or submit a PR. If you work on the UI migration, preserve `window.LocalMemoApp` for compatibility with `github-sync.js` unless you update the sync code too.
 
 ## License
 
