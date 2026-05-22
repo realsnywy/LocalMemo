@@ -34,6 +34,7 @@ function normalizeMetadata(metadata = {}, fallback = {}) {
     tags: normalizeTags(metadata.tags ?? fallback.tags),
     listName: String(metadata.listName ?? fallback.listName ?? '').trim(),
     reminderAt: String(metadata.reminderAt ?? fallback.reminderAt ?? '').trim(),
+    bannerUrl: String(metadata.bannerUrl ?? fallback.bannerUrl ?? '').trim(),
     archived: Boolean(metadata.archived ?? fallback.archived),
     trashed: Boolean(metadata.trashed ?? fallback.trashed),
   };
@@ -85,6 +86,7 @@ class DataManager {
       title: title.trim(),
       content: content.trim(),
       color,
+      order: this.data.notes.length + 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...itemMetadata,
@@ -157,6 +159,7 @@ class DataManager {
         text: item.text || '',
         completed: item.completed || false,
       })),
+      order: this.data.tasks.length + 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...itemMetadata,
@@ -308,12 +311,15 @@ class UIManager {
     this.searchQuery = '';
     this.dialogResolver = null;
     this.lists = this.loadLists();
+    this.reminderTimers = new Map();
+    this.reminderNotificationState = this.loadReminderNotificationState();
     this.initializeElements();
     this.setupEventListeners();
     this.applyStaticTranslations();
     this.renderLists();
     this.initializeViewMode();
     this.render();
+    this.scheduleReminderNotifications();
   }
 
   initializeViewMode() {
@@ -357,9 +363,27 @@ class UIManager {
     // Editor - Note
     this.noteTitleInput = document.getElementById('note-title-input');
     this.noteContentInput = document.getElementById('note-content-input');
+    this.notePreviewLabel = document.getElementById('note-preview-label');
+    this.noteContentPreview = document.getElementById('note-content-preview');
+    this.noteBoldBtn = document.getElementById('note-bold-btn');
+    this.noteItalicBtn = document.getElementById('note-italic-btn');
+    this.noteHeadingH1Btn = document.getElementById('note-heading-h1-btn');
+    this.noteHeadingH2Btn = document.getElementById('note-heading-h2-btn');
+    this.noteHeadingH3Btn = document.getElementById('note-heading-h3-btn');
+    this.noteListBtn = document.getElementById('note-list-btn');
+    this.noteCodeBtn = document.getElementById('note-code-btn');
     this.itemListInput = document.getElementById('item-list-input');
     this.itemTagsInput = document.getElementById('item-tags-input');
     this.itemReminderInput = document.getElementById('item-reminder-input');
+    this.noteBannerUrlInput = document.getElementById('note-banner-url-input');
+    this.noteBannerFileInput = document.getElementById('note-banner-file-input');
+    this.noteBannerPreviewImage = document.getElementById('banner-preview-image');
+    this.noteBannerPreviewEmpty = document.getElementById('banner-preview-empty');
+    this.noteBannerLabel = document.getElementById('note-banner-label');
+    this.noteBannerUploadLabel = document.getElementById('note-banner-upload-label');
+    this.clearBannerBtn = document.getElementById('clear-banner-btn');
+    this.clearBannerLabel = document.getElementById('clear-banner-label');
+    this.bannerPreviewLabel = document.getElementById('banner-preview-label');
     this.editorMarkdownNote = document.getElementById('editor-markdown-note');
 
     // Editor - Task
@@ -396,6 +420,10 @@ class UIManager {
     this.listsTabsContainer = document.getElementById('lists-tabs-container');
     this.listAddBtn = document.getElementById('list-add-btn');
     this.viewModeBtns = document.querySelectorAll('.view-mode-btn');
+
+    // Sort controls
+    this.sortSelect = document.getElementById('sort-select');
+    this.sortDirectionBtn = document.getElementById('sort-direction-btn');
 
     // Create button
     this.createMainBtn = document.getElementById('create-main-btn');
@@ -494,6 +522,30 @@ class UIManager {
       tab.addEventListener('click', (e) => this.switchEditorTab(e.target.dataset.tab));
     });
 
+    this.noteContentInput?.addEventListener('input', () => this.updateNotePreview());
+
+    const toolbarBindings = [
+      [this.noteBoldBtn, 'bold'],
+      [this.noteItalicBtn, 'italic'],
+      [this.noteHeadingH1Btn, 'heading'],
+      [this.noteHeadingH2Btn, 'heading2'],
+      [this.noteHeadingH3Btn, 'heading3'],
+      [this.noteListBtn, 'bulletList'],
+      [this.noteCodeBtn, 'code'],
+    ];
+
+    toolbarBindings.forEach(([button, action]) => {
+      button?.addEventListener('click', () => this.applyMarkdownAction(action));
+    });
+
+    this.noteBannerUrlInput?.addEventListener('input', () => {
+      this.updateBannerPreview(this.noteBannerUrlInput.value.trim());
+    });
+
+    this.noteBannerFileInput?.addEventListener('change', (e) => this.handleBannerFileSelect(e));
+
+    this.clearBannerBtn?.addEventListener('click', () => this.clearBanner());
+
     // Task Items
     this.addTaskItemBtn.addEventListener('click', () => this.addTaskItem());
 
@@ -513,7 +565,10 @@ class UIManager {
     });
 
     // Data update event
-    window.addEventListener('data-updated', () => this.render());
+    window.addEventListener('data-updated', () => {
+      this.render();
+      this.scheduleReminderNotifications();
+    });
 
     // Settings toggle
     this.autoSyncToggle.addEventListener('change', (e) => {
@@ -533,6 +588,32 @@ class UIManager {
       });
     });
 
+    // Sort controls
+    if (this.sortSelect) {
+      this.sortSelect.addEventListener('change', (e) => {
+        const settings = this.getSettings();
+        settings.sortMode = e.target.value;
+        this.saveSettings(settings);
+        this.render();
+      });
+    }
+
+    if (this.sortDirectionBtn) {
+      this.sortDirectionBtn.addEventListener('click', (e) => {
+        const settings = this.getSettings();
+        settings.sortAsc = !Boolean(settings.sortAsc);
+        this.saveSettings(settings);
+        // update button icon/title
+        const icon = this.sortDirectionBtn.querySelector('i');
+        if (icon) {
+          icon.classList.toggle('bi-arrow-up', settings.sortAsc);
+          icon.classList.toggle('bi-arrow-down', !settings.sortAsc);
+        }
+        this.sortDirectionBtn.title = settings.sortAsc ? 'Ascending' : 'Descending';
+        this.render();
+      });
+    }
+
     // List Add Button
     if (this.listAddBtn) {
       this.listAddBtn.addEventListener('click', () => this.addNewList());
@@ -540,6 +621,130 @@ class UIManager {
 
     // Load settings
     this.loadSettings();
+  }
+
+  loadReminderNotificationState() {
+    try {
+      const stored = localStorage.getItem('localmemo_reminder_notifications');
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  saveReminderNotificationState() {
+    localStorage.setItem('localmemo_reminder_notifications', JSON.stringify(this.reminderNotificationState));
+  }
+
+  getReminderNotificationKey(item) {
+    return `${item.type}:${item.id}:${item.reminderAt}`;
+  }
+
+  clearReminderTimers() {
+    this.reminderTimers.forEach(timerId => window.clearTimeout(timerId));
+    this.reminderTimers.clear();
+  }
+
+  async ensureNotificationPermission() {
+    if (!('Notification' in window)) {
+      return false;
+    }
+
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+
+    if (Notification.permission === 'denied') {
+      return false;
+    }
+
+    try {
+      return await Notification.requestPermission() === 'granted';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  scheduleReminderNotifications() {
+    this.clearReminderTimers();
+
+    const activeKeys = new Set();
+    const items = this.dataManager.getAllItems();
+
+    items.forEach(item => {
+      if (!item.reminderAt) {
+        return;
+      }
+
+      const reminderDate = new Date(item.reminderAt);
+      const reminderTime = reminderDate.getTime();
+      if (Number.isNaN(reminderTime)) {
+        return;
+      }
+
+      const key = this.getReminderNotificationKey(item);
+      activeKeys.add(key);
+
+      if (this.reminderNotificationState[key]) {
+        return;
+      }
+
+      const delay = reminderTime - Date.now();
+      if (delay <= 0) {
+        this.fireReminderNotification(item);
+        return;
+      }
+
+      const timerId = window.setTimeout(() => {
+        this.fireReminderNotification(item);
+      }, delay);
+
+      this.reminderTimers.set(key, timerId);
+    });
+
+    const nextState = {};
+    Object.entries(this.reminderNotificationState).forEach(([key, value]) => {
+      if (activeKeys.has(key)) {
+        nextState[key] = value;
+      }
+    });
+
+    const hasStateChanged = JSON.stringify(nextState) !== JSON.stringify(this.reminderNotificationState);
+    if (hasStateChanged) {
+      this.reminderNotificationState = nextState;
+      this.saveReminderNotificationState();
+    }
+  }
+
+  fireReminderNotification(item) {
+    if (!item.reminderAt) {
+      return;
+    }
+
+    const key = this.getReminderNotificationKey(item);
+    if (this.reminderNotificationState[key]) {
+      return;
+    }
+
+    if (!('Notification' in window) || Notification.permission === 'denied') {
+      return;
+    }
+
+    const title = item.title?.trim() || i18n.t('noTitle');
+    const message = `${i18n.t('reminderNotificationBody')}: ${title}`;
+    const notification = new Notification(i18n.t('reminderNotificationTitle'), {
+      body: message,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%2360a5fa" d="M12 2a7 7 0 0 0-7 7v4.2L3.4 15.8a1 1 0 0 0 .9 1.2h15.4a1 1 0 0 0 .9-1.2L19 13.2V9a7 7 0 0 0-7-7zm0 20a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22z"/></svg>',
+      tag: key,
+    });
+
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+
+    this.reminderNotificationState[key] = new Date().toISOString();
+    this.saveReminderNotificationState();
   }
 
   // ============================================
@@ -716,9 +921,11 @@ class UIManager {
         githubPat: '',
         githubGistId: '',
         autoSync: false,
+        sortMode: 'custom', // custom | name | date
+        sortAsc: false, // descending by default
       };
     } catch (error) {
-      return { githubPat: '', githubGistId: '', autoSync: false };
+      return { githubPat: '', githubGistId: '', autoSync: false, sortMode: 'custom', sortAsc: false };
     }
   }
 
@@ -731,6 +938,13 @@ class UIManager {
     this.githubPatInput.value = settings.githubPat || '';
     this.githubGistIdInput.value = settings.githubGistId || '';
     this.autoSyncToggle.checked = settings.autoSync || false;
+    if (this.sortSelect) this.sortSelect.value = settings.sortMode || 'custom';
+    if (this.sortDirectionBtn) {
+      this.sortDirectionBtn.dataset.asc = settings.sortAsc ? '1' : '0';
+      this.sortDirectionBtn.title = settings.sortAsc ? 'Ascending' : 'Descending';
+      this.sortDirectionBtn.querySelector('i')?.classList.toggle('bi-arrow-up', settings.sortAsc);
+      this.sortDirectionBtn.querySelector('i')?.classList.toggle('bi-arrow-down', !settings.sortAsc);
+    }
   }
 
   applyStaticTranslations() {
@@ -768,6 +982,20 @@ class UIManager {
     document.getElementById('item-list-label').textContent = i18n.t('itemList');
     document.getElementById('item-tags-label').textContent = i18n.t('itemTags');
     document.getElementById('item-reminder-label').textContent = i18n.t('itemReminder');
+    if (this.noteBannerLabel) this.noteBannerLabel.textContent = i18n.t('bannerImage');
+    if (this.noteBannerUrlInput) this.noteBannerUrlInput.placeholder = i18n.t('bannerUrl');
+    if (this.noteBannerUploadLabel) this.noteBannerUploadLabel.textContent = i18n.t('bannerUpload');
+    if (this.clearBannerLabel) this.clearBannerLabel.textContent = i18n.t('clearBanner');
+    if (this.bannerPreviewLabel) this.bannerPreviewLabel.textContent = i18n.t('bannerPreview');
+    if (this.noteBannerPreviewEmpty) this.noteBannerPreviewEmpty.textContent = i18n.t('noBannerSelected');
+    if (this.notePreviewLabel) this.notePreviewLabel.textContent = i18n.t('livePreview');
+    if (this.noteBoldBtn) this.noteBoldBtn.title = i18n.t('bold');
+    if (this.noteItalicBtn) this.noteItalicBtn.title = i18n.t('italic');
+    if (this.noteHeadingH1Btn) this.noteHeadingH1Btn.title = i18n.t('heading1');
+    if (this.noteHeadingH2Btn) this.noteHeadingH2Btn.title = i18n.t('heading2');
+    if (this.noteHeadingH3Btn) this.noteHeadingH3Btn.title = i18n.t('heading3');
+    if (this.noteListBtn) this.noteListBtn.title = i18n.t('bulletList');
+    if (this.noteCodeBtn) this.noteCodeBtn.title = i18n.t('code');
     document.getElementById('editor-markdown-note').textContent = i18n.t('markdownHint');
     this.itemListInput.placeholder = i18n.t('listPlaceholder');
     this.itemTagsInput.placeholder = i18n.t('tagsPlaceholder');
@@ -806,7 +1034,82 @@ class UIManager {
   }
 
   getDateLocale() {
-    return i18n.getLanguage() === 'pt' ? 'pt-BR' : 'en-US';
+    const language = i18n.getLanguage();
+    if (language === 'pt') {
+      return 'pt-BR';
+    }
+
+    if (language === 'es') {
+      return 'es-ES';
+    }
+
+    return 'en-US';
+  }
+
+  // Parse advanced search query tokens like `tag:work` `list:Inbox` `type:task` `pinned:true`
+  parseSearchQuery(rawQuery = '') {
+    const out = {
+      terms: [],
+      tags: [],
+      lists: [],
+      typeFilter: null,
+      pinnedFilter: null,
+      archivedFilter: null,
+      trashedFilter: null,
+      titleTerms: [],
+      contentTerms: [],
+    };
+
+    const q = String(rawQuery || '').trim();
+    if (!q) return out;
+
+    // find key:value tokens (allow quoted values)
+    const tokenRe = /(\b[\w-]+):("[^"]+"|\S+)/g;
+    let remainder = q;
+    let m;
+    while ((m = tokenRe.exec(q)) !== null) {
+      const key = m[1].toLowerCase();
+      let val = m[2];
+      if (val.startsWith('"') && val.endsWith('"')) {
+        val = val.slice(1, -1);
+      }
+      val = String(val).toLowerCase();
+
+      // remove this exact token from remainder (first occurrence)
+      remainder = remainder.replace(m[0], '');
+
+      if (key === 'tag' || key === 'tags') {
+        out.tags.push(val);
+      } else if (key === 'list' || key === 'in') {
+        out.lists.push(val);
+      } else if (key === 'type') {
+        out.typeFilter = val; // 'note' or 'task'
+      } else if (key === 'pinned') {
+        out.pinnedFilter = (val === 'true' || val === '1' || val === 'yes');
+      } else if (key === 'archived') {
+        out.archivedFilter = (val === 'true' || val === '1' || val === 'yes');
+      } else if (key === 'trashed') {
+        out.trashedFilter = (val === 'true' || val === '1' || val === 'yes');
+      } else if (key === 'title') {
+        out.titleTerms.push(val);
+      } else if (key === 'content') {
+        out.contentTerms.push(val);
+      } else {
+        // unknown key - treat as generic term
+        out.terms.push((key + ':' + val).toLowerCase());
+      }
+    }
+
+    // Remaining free text terms
+    const words = remainder
+      .trim()
+      .split(/\s+/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(s => s.toLowerCase());
+
+    out.terms = out.terms.concat(words);
+    return out;
   }
 
   showNotice(message, title = i18n.t('noticeTitle')) {
@@ -954,6 +1257,7 @@ class UIManager {
     this.editorTitle.textContent = i18n.t('newNoteTitle');
     this.editorModal.classList.add('active');
     setTimeout(() => this.noteTitleInput.focus(), 0);
+    this.updateNotePreview();
   }
 
   openEditorForNewTask() {
@@ -979,6 +1283,7 @@ class UIManager {
       this.noteContentInput.value = note.content;
       this.populateEditorMetadata(note);
       this.editorTitle.textContent = i18n.t('editNoteTitle');
+      this.updateNotePreview();
     } else if (type === 'task') {
       const task = this.dataManager.getTaskById(id);
       this.setEditorMode('task');
@@ -1005,6 +1310,10 @@ class UIManager {
       tab.classList.toggle('active', tab.dataset.tab === mode);
     });
 
+    if (this.noteBannerSection) {
+      this.noteBannerSection.hidden = mode !== 'note';
+    }
+
     document.querySelectorAll('.editor-tab-content').forEach(content => {
       content.classList.toggle('active', content.id === `${mode}-tab`);
     });
@@ -1018,12 +1327,17 @@ class UIManager {
     this.itemListInput.value = '';
     this.itemTagsInput.value = '';
     this.itemReminderInput.value = '';
+    this.clearBanner();
+    this.updateNotePreview();
   }
 
   populateEditorMetadata(item) {
     this.itemListInput.value = item.listName || '';
     this.itemTagsInput.value = Array.isArray(item.tags) ? item.tags.join(', ') : '';
     this.itemReminderInput.value = item.reminderAt || '';
+    const bannerUrl = item.bannerUrl || item.banner?.src || '';
+    this.noteBannerUrlInput.value = bannerUrl;
+    this.updateBannerPreview(bannerUrl);
   }
 
   getEditorMetadata() {
@@ -1031,7 +1345,136 @@ class UIManager {
       listName: this.itemListInput.value.trim(),
       tags: this.itemTagsInput.value,
       reminderAt: this.itemReminderInput.value,
+      bannerUrl: this.noteBannerUrlInput.value.trim(),
     };
+  }
+
+  handleBannerFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      event.target.value = '';
+      this.showNotice(i18n.t('invalidFormat'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const bannerUrl = String(reader.result || '');
+      this.noteBannerUrlInput.value = bannerUrl;
+      this.updateBannerPreview(bannerUrl);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }
+
+  updateBannerPreview(bannerUrl) {
+    if (!this.noteBannerPreviewImage || !this.noteBannerPreviewEmpty) {
+      return;
+    }
+
+    if (bannerUrl) {
+      this.noteBannerPreviewImage.src = bannerUrl;
+      this.noteBannerPreviewImage.hidden = false;
+      this.noteBannerPreviewEmpty.hidden = true;
+      document.getElementById('banner-preview')?.classList.add('has-image');
+    } else {
+      this.noteBannerPreviewImage.removeAttribute('src');
+      this.noteBannerPreviewImage.hidden = true;
+      this.noteBannerPreviewEmpty.hidden = false;
+      document.getElementById('banner-preview')?.classList.remove('has-image');
+    }
+  }
+
+  clearBanner() {
+    if (this.noteBannerUrlInput) {
+      this.noteBannerUrlInput.value = '';
+    }
+    if (this.noteBannerFileInput) {
+      this.noteBannerFileInput.value = '';
+    }
+    this.updateBannerPreview('');
+  }
+
+  updateNotePreview() {
+    if (!this.noteContentPreview) {
+      return;
+    }
+
+    const content = this.noteContentInput.value.trim();
+    this.noteContentPreview.innerHTML = content
+      ? this.renderMarkdown(content)
+      : `<p class="note-content-empty">${this.escapeHtml(i18n.t('previewEmpty'))}</p>`;
+  }
+
+  applyMarkdownAction(action) {
+    const input = this.noteContentInput;
+    if (!input) {
+      return;
+    }
+
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+    const value = input.value;
+    const selectedText = value.slice(start, end);
+
+    const replaceSelection = (replacement, selectionStart, selectionEnd) => {
+      input.value = `${value.slice(0, start)}${replacement}${value.slice(end)}`;
+      input.focus();
+      input.setSelectionRange(selectionStart, selectionEnd);
+      this.updateNotePreview();
+    };
+
+    const wrapSelection = (prefix, suffix = prefix) => {
+      const replacement = selectedText || '';
+      if (selectedText) {
+        const wrapped = `${prefix}${replacement}${suffix}`;
+        replaceSelection(wrapped, start + prefix.length, start + prefix.length + replacement.length);
+      } else {
+        const insertion = `${prefix}${suffix}`;
+        replaceSelection(insertion, start + prefix.length, start + prefix.length);
+      }
+    };
+
+    const prefixLines = (prefix) => {
+      if (!selectedText) {
+        replaceSelection(prefix, start + prefix.length, start + prefix.length);
+        return;
+      }
+
+      const lines = selectedText.split(/\r?\n/).map(line => `${prefix}${line}`);
+      const replacement = lines.join('\n');
+      replaceSelection(replacement, start, start + replacement.length);
+    };
+
+    switch (action) {
+      case 'bold':
+        wrapSelection('**');
+        break;
+      case 'italic':
+        wrapSelection('*');
+        break;
+      case 'heading2':
+        prefixLines('## ');
+        break;
+      case 'heading3':
+        prefixLines('### ');
+        break;
+      case 'heading':
+        prefixLines('# ');
+        break;
+      case 'bulletList':
+        prefixLines('- ');
+        break;
+      case 'code':
+        wrapSelection('`');
+        break;
+      default:
+        break;
+    }
   }
 
   addTaskItem(text = '', completed = false) {
@@ -1063,20 +1506,24 @@ class UIManager {
     return group;
   }
 
-  saveItem() {
+  async saveItem() {
     if (this.currentEditingType === 'note') {
-      this.saveNote();
+      await this.saveNote();
     } else if (this.currentEditingType === 'task') {
-      this.saveTask();
+      await this.saveTask();
     }
   }
 
-  saveNote() {
+  async saveNote() {
     const title = this.noteTitleInput.value;
     const content = this.noteContentInput.value;
     const metadata = this.getEditorMetadata();
 
-    if (!title && !content) {
+    if (metadata.reminderAt) {
+      await this.ensureNotificationPermission();
+    }
+
+    if (!title && !content && !metadata.bannerUrl) {
       this.showNotice(i18n.t('emptyNoteWarning'));
       return;
     }
@@ -1089,11 +1536,16 @@ class UIManager {
 
     this.closeEditor();
     this.render();
+    this.scheduleReminderNotifications();
   }
 
-  saveTask() {
+  async saveTask() {
     const title = this.taskTitleInput.value.trim();
     const metadata = this.getEditorMetadata();
+
+    if (metadata.reminderAt) {
+      await this.ensureNotificationPermission();
+    }
 
     if (!title) {
       this.showNotice(i18n.t('emptyTaskTitle'));
@@ -1108,6 +1560,11 @@ class UIManager {
       }))
       .filter(item => item.text);
 
+    if (!items || items.length === 0) {
+      this.showNotice(i18n.t('emptyTaskItemsWarning'));
+      return;
+    }
+
     if (this.currentEditingId) {
       this.dataManager.updateTask(this.currentEditingId, title, items, metadata);
     } else {
@@ -1116,6 +1573,7 @@ class UIManager {
 
     this.closeEditor();
     this.render();
+    this.scheduleReminderNotifications();
   }
 
   closeEditor() {
@@ -1217,6 +1675,15 @@ class UIManager {
 
     this.notesGrid.innerHTML = items.map(item => this.renderItem(item)).join('');
     this.notesGrid.className = `notes-container view-${this.currentViewMode}`;
+
+    // Make cards draggable for manual reorder
+    this.notesGrid.querySelectorAll('.note-card').forEach(card => {
+      card.setAttribute('draggable', 'true');
+      card.addEventListener('dragstart', (e) => this.handleDragStart(e, card));
+      card.addEventListener('dragover', (e) => this.handleDragOver(e, card));
+      card.addEventListener('drop', (e) => this.handleDrop(e, card));
+      card.addEventListener('dragend', () => this.clearDragState());
+    });
 
     // Add event listeners to menu buttons
     document.querySelectorAll('.note-menu-btn').forEach(btn => {
@@ -1346,21 +1813,111 @@ class UIManager {
       items = items.filter(item => item.listName === this.currentList);
     }
 
-    // Filter by search query
+    // Advanced search parsing and filtering
     if (this.searchQuery) {
-      items = items.filter(item => {
-        const searchableText = [
-          item.title,
-          item.content || '',
-          Array.isArray(item.tags) ? item.tags.join(' ') : '',
-          item.listName || '',
-          item.reminderAt || '',
-        ].join(' ').toLowerCase();
-        return searchableText.includes(this.searchQuery);
-      });
+      const parsed = this.parseSearchQuery(this.searchQuery);
+
+      // Type filter from tokens
+      if (parsed.typeFilter) {
+        items = items.filter(i => i.type === parsed.typeFilter);
+      }
+
+      // List filter tokens
+      if (parsed.lists.length) {
+        items = items.filter(i => parsed.lists.includes(String(i.listName || '').toLowerCase()));
+      }
+
+      // Tag tokens (require all specified tags)
+      if (parsed.tags.length) {
+        items = items.filter(i => {
+          const itemTags = Array.isArray(i.tags) ? i.tags.map(t => String(t).toLowerCase()) : [];
+          return parsed.tags.every(t => itemTags.includes(t));
+        });
+      }
+
+      // Boolean flags
+      if (parsed.pinnedFilter !== null) {
+        items = items.filter(i => Boolean(i.pinned) === parsed.pinnedFilter);
+      }
+      if (parsed.archivedFilter !== null) {
+        items = items.filter(i => Boolean(i.archived) === parsed.archivedFilter);
+      }
+      if (parsed.trashedFilter !== null) {
+        items = items.filter(i => Boolean(i.trashed) === parsed.trashedFilter);
+      }
+
+      // Title/content specific tokens
+      if (parsed.titleTerms.length) {
+        items = items.filter(i => parsed.titleTerms.some(t => String(i.title || '').toLowerCase().includes(t)));
+      }
+      if (parsed.contentTerms.length) {
+        items = items.filter(i => parsed.contentTerms.some(t => String(i.content || '').toLowerCase().includes(t)));
+      }
+
+      // General free-text terms
+      if (parsed.terms.length) {
+        items = items.filter(item => {
+          const searchableText = [
+            item.title,
+            item.content || '',
+            Array.isArray(item.tags) ? item.tags.join(' ') : '',
+            item.listName || '',
+            item.reminderAt || '',
+          ].join(' ').toLowerCase();
+
+          return parsed.terms.every(term => searchableText.includes(term));
+        });
+      }
     }
 
+    // Apply active sorting
+    items = this.applySorting(items);
     return items;
+  }
+
+  // Apply sorting modes (respect pinned grouping, then apply chosen sort within groups)
+  applySorting(items) {
+    try {
+      const settings = this.getSettings();
+      const mode = settings.sortMode || 'custom';
+      const asc = Boolean(settings.sortAsc);
+
+      // Keep pinned items grouped at top
+      const pinned = items.filter(i => i.pinned);
+      const normal = items.filter(i => !i.pinned);
+
+      const comparator = (a, b) => {
+        if (mode === 'name') {
+          const an = String(a.title || '').toLowerCase();
+          const bn = String(b.title || '').toLowerCase();
+          return an.localeCompare(bn) * (asc ? 1 : -1);
+        }
+
+        if (mode === 'date') {
+          const ad = new Date(a.updatedAt).getTime() || 0;
+          const bd = new Date(b.updatedAt).getTime() || 0;
+          return (ad - bd) * (asc ? 1 : -1);
+        }
+
+        // custom: use order if present, otherwise fallback to updatedAt desc
+        const ao = Number.isFinite(Number(a.order)) ? Number(a.order) : null;
+        const bo = Number.isFinite(Number(b.order)) ? Number(b.order) : null;
+        if (ao !== null && bo !== null) {
+          return (ao - bo) * (asc ? 1 : -1);
+        }
+        // fallback: date
+        const aT = new Date(a.updatedAt).getTime() || 0;
+        const bT = new Date(b.updatedAt).getTime() || 0;
+        return (aT - bT) * (asc ? 1 : -1);
+      };
+
+      pinned.sort(comparator);
+      normal.sort(comparator);
+
+      return [...pinned, ...normal];
+    } catch (error) {
+      return items;
+    }
   }
 
   renderItem(item) {
@@ -1387,9 +1944,16 @@ class UIManager {
 
     const badges = this.renderItemBadges(note);
     const content = note.content ? this.renderMarkdown(note.content) : '';
+    const bannerUrl = note.bannerUrl || note.banner?.src || '';
+    const banner = bannerUrl ? `
+      <div class="note-banner">
+        <img src="${this.escapeHtml(bannerUrl)}" alt="${this.escapeHtml(note.title || i18n.t('noTitle'))} banner" loading="lazy">
+      </div>
+    ` : '';
 
     return `
       <div class="note-card color-${note.color}${note.pinned ? ' is-pinned' : ''}${note.archived ? ' is-archived' : ''}${note.trashed ? ' is-trashed' : ''}" data-id="${note.id}" data-type="note">
+        ${banner}
         <div class="note-card-header">
           <h3 class="note-title">${this.escapeHtml(note.title || i18n.t('noTitle'))}</h3>
           <div class="note-card-buttons">
@@ -1627,6 +2191,64 @@ class UIManager {
       "'": '&#039;',
     };
     return source.replace(/[&<>"']/g, m => map[m]);
+  }
+
+  // ============================================
+  // Drag & Drop Reorder
+  // ============================================
+  handleDragStart(e, card) {
+    e.dataTransfer.effectAllowed = 'move';
+    const id = card.dataset.id;
+    const type = card.dataset.type;
+    e.dataTransfer.setData('text/plain', JSON.stringify({ id, type }));
+    card.classList.add('dragging');
+  }
+
+  handleDragOver(e, card) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    card.classList.add('drag-over');
+  }
+
+  handleDrop(e, card) {
+    e.preventDefault();
+    const source = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
+    const targetId = card.dataset.id;
+    const targetType = card.dataset.type;
+
+    if (!source.id || !source.type) return;
+
+    // Only allow reordering within same type and same list filter
+    if (source.type !== targetType) return;
+
+    this.reorderItems(source.id, targetId, source.type);
+    this.clearDragState();
+  }
+
+  clearDragState() {
+    document.querySelectorAll('.note-card.dragging').forEach(c => c.classList.remove('dragging'));
+    document.querySelectorAll('.note-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+  }
+
+  reorderItems(sourceId, targetId, type) {
+    // Get arrays and find indexes
+    const collection = type === 'task' ? this.dataManager.data.tasks : this.dataManager.data.notes;
+    const sourceIndex = collection.findIndex(i => i.id === sourceId);
+    const targetIndex = collection.findIndex(i => i.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    // Remove source item
+    const [moved] = collection.splice(sourceIndex, 1);
+    // Insert before targetIndex (after removal, targetIndex may shift)
+    const insertIndex = sourceIndex < targetIndex ? targetIndex : targetIndex;
+    collection.splice(insertIndex, 0, moved);
+
+    // Recalculate order fields
+    collection.forEach((item, idx) => { item.order = idx + 1; });
+
+    // Persist and re-render
+    this.dataManager.saveToStorage();
+    this.render();
   }
 }
 

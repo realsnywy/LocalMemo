@@ -41,6 +41,7 @@
       <div class="header-actions">
         <div class="language-selector">
           <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="es">ES</button>
           <button class="lang-btn" data-lang="pt">PT</button>
         </div>
         <button class="action-btn" id="settings-btn" title="Settings">
@@ -99,6 +100,17 @@
         </button>
         <button class="view-mode-btn" data-mode="list" title="List view">
           <i class="bi bi-list-ul"></i>
+        </button>
+      </div>
+      <div class="sort-controls">
+        <label for="sort-select" class="visually-hidden">Sort</label>
+        <select id="sort-select" class="form-select">
+          <option value="custom">Custom</option>
+          <option value="name">By name</option>
+          <option value="date">By date</option>
+        </select>
+        <button class="action-btn" id="sort-direction-btn" title="Toggle sort direction">
+          <i class="bi bi-arrow-down-up"></i>
         </button>
       </div>
     </section>
@@ -232,6 +244,29 @@
                 <input type="datetime-local" id="item-reminder-input" class="form-input" autocomplete="off">
               </div>
             </div>
+            <div class="banner-section" id="banner-section">
+              <div class="form-group">
+                <label for="note-banner-url-input" id="note-banner-label">Banner image</label>
+                <input type="url" id="note-banner-url-input" class="form-input"
+                  placeholder="https://example.com/image.jpg" autocomplete="off">
+              </div>
+              <div class="banner-actions">
+                <label class="create-btn secondary banner-upload-btn" for="note-banner-file-input">
+                  <i class="bi bi-upload"></i> <span id="note-banner-upload-label">Upload image</span>
+                </label>
+                <input type="file" id="note-banner-file-input" accept="image/*" hidden>
+                <button type="button" class="create-btn secondary" id="clear-banner-btn">
+                  <i class="bi bi-x-circle"></i> <span id="clear-banner-label">Clear banner</span>
+                </button>
+              </div>
+              <div class="banner-preview-group">
+                <p class="editor-meta-note" id="banner-preview-label">Preview</p>
+                <div class="banner-preview" id="banner-preview">
+                  <img id="banner-preview-image" alt="" hidden>
+                  <div class="banner-preview-empty" id="banner-preview-empty">No banner selected.</div>
+                </div>
+              </div>
+            </div>
             <p class="editor-meta-note" id="editor-markdown-note">Markdown is supported in note content.</p>
           </div>
 
@@ -239,8 +274,47 @@
           <div id="note-tab" class="editor-tab-content active">
             <input type="text" id="note-title-input" class="editor-title" placeholder="Note title (optional)"
               autocomplete="off">
-            <textarea id="note-content-input" class="editor-textarea"
-              placeholder="Write your note here... (Markdown supported)"></textarea>
+            <div class="note-editor-layout">
+              <div class="editor-toolbar" id="note-editor-toolbar" aria-label="Formatting toolbar">
+                <button type="button" class="toolbar-btn" id="note-bold-btn" data-action="bold" title="Bold">
+                  <i class="bi bi-type-bold"></i>
+                </button>
+                <button type="button" class="toolbar-btn" id="note-italic-btn" data-action="italic" title="Italic">
+                  <i class="bi bi-type-italic"></i>
+                </button>
+                <button type="button" class="toolbar-btn" id="note-heading-h1-btn" data-action="heading"
+                  title="Heading 1">
+                  <i class="bi bi-type-h1"></i>
+                </button>
+                <button type="button" class="toolbar-btn" id="note-heading-h2-btn" data-action="heading2"
+                  title="Heading 2">
+                  <i class="bi bi-type-h2"></i>
+                </button>
+                <button type="button" class="toolbar-btn" id="note-heading-h3-btn" data-action="heading3"
+                  title="Heading 3">
+                  <i class="bi bi-type-h3"></i>
+                </button>
+                <button type="button" class="toolbar-btn" id="note-list-btn" data-action="bulletList"
+                  title="Bullet list">
+                  <i class="bi bi-list-ul"></i>
+                </button>
+                <button type="button" class="toolbar-btn" id="note-code-btn" data-action="code" title="Inline code">
+                  <i class="bi bi-code-slash"></i>
+                </button>
+              </div>
+              <div class="note-editor-split">
+                <div class="note-editor-pane note-editor-input-pane">
+                  <textarea id="note-content-input" class="editor-textarea"
+                    placeholder="Write your note here... (Markdown supported)"></textarea>
+                </div>
+                <div class="note-editor-pane note-editor-preview-pane">
+                  <div class="note-editor-preview-header">
+                    <span id="note-preview-label">Live preview</span>
+                  </div>
+                  <div id="note-content-preview" class="note-content-preview markdown-content"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Task Editor -->
@@ -307,7 +381,8 @@
   <!-- Scripts -->
   <script src="i18n.js"></script>
   <script src="app.js"></script>
-  <script src="github-sync.js"></script>
+  <script type="module" src="src/ui.js"></script>
+  <script src="github-sync.js" defer></script>
 </body>
 
 </html>
