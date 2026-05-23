@@ -1,8 +1,6 @@
-// storage.js - DataManager split from app.js
+// modules/storage.js - DataManager split from app.js
+import { STORAGE_KEY, STORAGE_LISTS_KEY } from './constants.js';
 import { normalizeMetadata } from './models.js';
-
-const STORAGE_KEY = 'localmemo_data';
-const STORAGE_LISTS_KEY = 'localmemo_lists';
 
 export class DataManager {
   constructor() {
@@ -128,9 +126,7 @@ export class DataManager {
   }
 
   togglePinned(id, type) { return this.updateItemState(id, type, { pinned: !Boolean(this.getItemById(id, type)?.pinned) }); }
-
   toggleArchived(id, type) { return this.updateItemState(id, type, { archived: !Boolean(this.getItemById(id, type)?.archived), trashed: false }); }
-
   toggleTrash(id, type) { return this.updateItemState(id, type, { trashed: !Boolean(this.getItemById(id, type)?.trashed) }); }
 
   getAllItems() {
@@ -141,7 +137,6 @@ export class DataManager {
   }
 
   deleteAllData() { this.data = { notes: [], tasks: [] }; this.saveToStorage(); localStorage.removeItem(STORAGE_LISTS_KEY); }
-
   exportData() { return JSON.stringify(this.data, null, 2); }
 
   importData(jsonString) {

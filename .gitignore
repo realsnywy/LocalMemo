@@ -1,0 +1,19 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor and workspace noise
+*.code-workspace
+*.log
+*.tmp
+*.swp
+
+# Build / dependency folders
+node_modules/
+dist/
+build/
+coverage/
+
+# Local environment files
+.env
+.env.*

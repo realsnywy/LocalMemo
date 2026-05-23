@@ -1,5 +1,4 @@
-// models.js - utility helpers
-// Exports: normalizeTags, normalizeMetadata, escapeHtml (optional), renderMarkdown (optional)
+// modules/models.js - utility helpers
 
 export function normalizeTags(tags) {
   if (Array.isArray(tags)) {
@@ -28,7 +27,6 @@ export function normalizeMetadata(metadata = {}, fallback = {}) {
   };
 }
 
-// Small HTML escape helper commonly used by rendering code
 export function escapeHtml(text) {
   const source = String(text ?? '');
   const map = {
@@ -41,7 +39,6 @@ export function escapeHtml(text) {
   return source.replace(/[&<>"']/g, m => map[m]);
 }
 
-// Lightweight markdown renderer used in several places
 export function renderMarkdown(text) {
   const lines = String(text || '').split(/\r?\n/);
   const blocks = [];
