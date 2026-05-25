@@ -17,3 +17,18 @@ coverage/
 # Local environment files
 .env
 .env.*
+
+# Tauri / Rust build artifacts
+target/
+.cargo/
+
+# Tauri app files
+.tauri/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# npm logs
+npm-debug.log*

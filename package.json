@@ -1,0 +1,34 @@
+{
+  "name": "localmemo",
+  "version": "1.0.0",
+  "description": "LocalMemo is a lightweight notes and tasks app built with vanilla HTML, CSS, and JavaScript. Everything is stored locally in the browser, with optional private GitHub Gist sync for backup.",
+  "main": "github-sync.js",
+  "scripts": {
+    "dev": "tauri dev",
+    "build:frontend": "node scripts/build-frontend.js",
+    "build": "npm run build:frontend && tauri build",
+    "tauri": "tauri",
+    "icons:generate": "node scripts/generate-icons.js",
+    "clean": "node scripts/clean.js",
+    "reinstall": "npm run clean && npm install",
+    "test": "echo \"No tests configured\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/realsnywy/LocalMemo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/realsnywy/LocalMemo/issues"
+  },
+  "homepage": "https://github.com/realsnywy/LocalMemo#readme",
+  "devDependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/cli": "^2.11.2",
+    "sharp": "^0.32.0",
+    "png2icons": "^1.0.0"
+  }
+}
