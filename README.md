@@ -34,9 +34,9 @@ LocalMemo is a lightweight notes and tasks app built with vanilla HTML, CSS, and
 - Use Sync Now to create or update the backup.
 - Automatic sync can run every 5 minutes when enabled.
 
-## Building for Desktop
+## Building for Desktop (Tauri)
 
-LocalMemo is also available as a native Windows desktop app built with [Tauri](https://tauri.app).
+LocalMemo can be packaged as a native Windows desktop app using [Tauri](https://tauri.app).
 
 ### Prerequisites
 
@@ -47,52 +47,21 @@ LocalMemo is also available as a native Windows desktop app built with [Tauri](h
 
 ```bash
 npm install
-npm run dev          # Run dev server with Tauri window
+npm run dev
 ```
 
 ### Release Build
 
 ```bash
-npm run clean        # Clean build artifacts
+npm run clean
 npm install
-npm run icons:generate  # (Optional) Regenerate icons from SVG
-npm run build        # Build production-optimized Windows installers
+npm run icons:generate  # optional: regenerate icons from SVG
+npm run build
 ```
 
-Installers will be in `src-tauri/target/release/bundle/`:
+Installers will be created under `src-tauri/target/release/bundle/` (MSI and NSIS builds).
 
-- **LocalMemo_1.0.0_x64.msi** - MSI installer
-- **LocalMemo_1.0.0_x64-setup.exe** - NSIS installer
-
-## Project Files
-
-- Node.js 18+ and npm
-- Rust 1.77+ (for Tauri builds)
-
-### Development
-
-```bash
-npm install
-npm run dev          # Run dev server with Tauri window
-```
-
-### Release Build
-
-```bash
-npm run clean        # Clean build artifacts
-npm install
-npm run icons:generate  # (Optional) Regenerate icons from SVG
-npm run build        # Build production-optimized Windows installers
-```
-
-Installers will be in `src-tauri/target/release/bundle/`:
-
-- **LocalMemo_1.0.0_x64.msi** - MSI installer
-- **LocalMemo_1.0.0_x64-setup.exe** - NSIS installer
-
-## Project Files
-
-Current layout (not exhaustive):
+## Project Layout
 
 ```
 LocalMemo/
@@ -117,7 +86,7 @@ LocalMemo/
 - Archived items and trash remain stored locally until restored or removed.
 - Printing uses the browser dialog and reflects the current filtered view.
 
-### Contributing
+## Contributing
 
 - Open an issue or submit a PR.
 - `window.LocalMemoApp` is exposed for compatibility with `github-sync.js`; maintain this interface if modifying the bootstrap.
