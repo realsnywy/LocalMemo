@@ -1,5 +1,9 @@
 # LocalMemo
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/bb71f033-f7ad-4592-a3eb-f6a035ce2b5a" width="150" alt="LocalMemo Logo">
+</p>
+
 LocalMemo is a lightweight notes and tasks app built with vanilla HTML, CSS, and JavaScript. Everything is stored locally in the browser, with optional private GitHub Gist sync for backup.
 
 ## Highlights
