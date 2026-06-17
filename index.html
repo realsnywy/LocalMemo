@@ -23,7 +23,7 @@
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.41-1.41L10.5 9.7 4 17h17L12.96 8.29z' fill='%23e5e5e5'/></svg>">
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' width='128' height='128' style='background:transparent'><g transform='matrix(1,0,0,1,-2.5,0)'><path d='M160,45L160,155C160,163.279 153.279,170 145,170L55,170C46.721,170 40,163.279 40,155L40,45C40,36.721 46.721,30 55,30L145,30C153.279,30 160,36.721 160,45Z' style='fill:white;stroke:url(%23_Linear1);stroke-width:8px;'/><path d='M70,60L130,60M70,90L130,90M70,120L110,120' style='fill-rule:nonzero;stroke:rgb(51,51,51);stroke-width:6px;stroke-linecap:round;'/><circle cx='140' cy='140' r='25' style='fill:rgb(74,144,226);'/><path d='M140,128L140,152M128,140L152,140' style='fill-rule:nonzero;stroke:white;stroke-width:6px;stroke-linecap:round;'/><defs><linearGradient id='_Linear1' x1='0' y1='0' x2='1' y2='0' gradientUnits='userSpaceOnUse' gradientTransform='matrix(120,140,-140,120,40,30)'><stop offset='0' style='stop-color:rgb(74,144,226);stop-opacity:1'/><stop offset='1' style='stop-color:rgb(103,194,58);stop-opacity:1'/></linearGradient></defs></g></svg>">
 </head>
 
 <body class="fade-in">
@@ -31,10 +31,28 @@
   <header class="app-header">
     <div class="header-content">
       <div class="app-title-section">
-        <svg class="app-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.41-1.41L10.5 9.7 4 17h17L12.96 8.29z"
-            fill="currentColor" />
+        <svg class="app-icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g transform="matrix(1,0,0,1,-2.5,0)">
+            <path
+              d="M160,45L160,155C160,163.279 153.279,170 145,170L55,170C46.721,170 40,163.279 40,155L40,45C40,36.721 46.721,30 55,30L145,30C153.279,30 160,36.721 160,45Z"
+              style="fill:white;stroke:url(#_Linear1);stroke-width:8px;" />
+          </g>
+          <g transform="matrix(1,0,0,1,-2.5,0)">
+            <path d="M70,60L130,60M70,90L130,90M70,120L110,120"
+              style="fill-rule:nonzero;stroke:rgb(51,51,51);stroke-width:6px;stroke-linecap:round;" />
+          </g>
+          <g id="Button" transform="matrix(1,0,0,1,-2.5,0)">
+            <circle cx="140" cy="140" r="25" style="fill:rgb(74,144,226);" />
+            <path id="Plus" d="M140,128L140,152M128,140L152,140"
+              style="fill-rule:nonzero;stroke:white;stroke-width:6px;stroke-linecap:round;" />
+          </g>
+          <defs>
+            <linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse"
+              gradientTransform="matrix(120,140,-140,120,40,30)">
+              <stop offset="0" style="stop-color:rgb(74,144,226);stop-opacity:1" />
+              <stop offset="1" style="stop-color:rgb(103,194,58);stop-opacity:1" />
+            </linearGradient>
+          </defs>
         </svg>
         <h1 class="app-title">LocalMemo</h1>
       </div>
